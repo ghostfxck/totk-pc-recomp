@@ -3297,7 +3297,17 @@ static void op_dispatch_ind(VkExec *ex, const p_dispatch_ind *d) {
 //   answered in one comparison; when one is full, updates take the old path.
 
 static int ov_on(void) {
-    if (OV.mode < 0) OV.mode = rt_knob("UB_OVERLAY", "1");
+    if (OV.mode < 0) {
+        const char *def = "1";
+#ifdef __linux__
+        // Experimental fallback for #974: compare the pre-0.3.12 update path on Linux NVIDIA without reverting the
+        // lifetime fixes. An explicit ub_overlay setting still selects either path for a same-build comparison.
+        if (vk_ctx()->props.vendorID == 0x10de) def = "0";
+#endif
+        OV.mode = rt_knob("UB_OVERLAY", def);
+        rt_log("vk: uniform update overlays %s (experimental #974 build; TOTK_UB_OVERLAY=0/1 selects the path)",
+               OV.mode == 2 ? "A/B" : OV.mode ? "on" : "off");
+    }
     return RT_KNOB_ON(OV.mode);
 }
 
